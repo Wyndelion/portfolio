@@ -63,10 +63,6 @@ html.dragging #bg { cursor: grabbing; }
   color: var(--muted);
 }
 .controls label { display: flex; flex-direction: column; gap: 8px; }
-.controls button {
-  background: none; border: 1px solid var(--line); color: var(--fg);
-  padding: 6px 12px; border-radius: 999px; font: inherit; cursor: pointer;
-}
 
 input[type=range] {
   -webkit-appearance: none; appearance: none;
@@ -119,7 +115,6 @@ input[type=range]::-moz-range-thumb {
   .nav nav { gap: 16px; font-size: .85rem; }
   .logo { letter-spacing: .08em; font-size: .68rem; }
   .controls { flex-wrap: wrap; }
-  .controls button { order: -1; }
 }
 
 /* Content panel: the shape wraps it, so it is fixed and scrolls on its own. Hidden on the landing page. */

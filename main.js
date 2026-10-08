@@ -70,8 +70,14 @@ for (const [key, el] of Object.entries(inputs)) {
   });
 }
 
+// iOS only allows the motion-sensor permission prompt from a tap, so it can't pop up on load.
+// Instead the first tap anywhere on the page asks for it (Android needs no permission at all).
 if (shape.needsPermission) {
-  const btn = $('tilt');
-  btn.hidden = false;
-  btn.addEventListener('click', async () => { if (await shape.requestTilt()) btn.hidden = true; });
+  const ask = () => {
+    removeEventListener('click', ask);
+    removeEventListener('touchend', ask);
+    shape.requestTilt();
+  };
+  addEventListener('click', ask);
+  addEventListener('touchend', ask);
 }
