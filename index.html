@@ -4,21 +4,25 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
   <title>David</title>
-  <script>try { if (sessionStorage.getItem('theme') === 'light') document.documentElement.dataset.theme = 'light'; } catch {}</script>
+  <script>
+    try { if (sessionStorage.getItem('theme') === 'light') document.documentElement.dataset.theme = 'light'; } catch {}
+    // Set the route before first paint so a direct link to #/about doesn't flash the landing page.
+    document.documentElement.dataset.route = (location.hash.match(/^#\/(projects|about|contact)$/) || [0, 'home'])[1];
+  </script>
   <link rel="stylesheet" href="style.css">
   <script type="importmap">
     { "imports": { "three": "https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js" } }
   </script>
 </head>
-<body class="landing">
+<body>
   <canvas id="bg" aria-hidden="true"></canvas>
 
   <header class="nav">
-    <a class="logo" href="index.html">DAVID</a>
+    <a class="logo" href="#/">DAVID</a>
     <nav>
-      <a href="projects.html">Projects</a>
-      <a href="about.html">About</a>
-      <a href="contact.html">Contact</a>
+      <a href="#/projects" data-route="projects">Projects</a>
+      <a href="#/about" data-route="about">About</a>
+      <a href="#/contact" data-route="contact">Contact</a>
     </nav>
   </header>
 
@@ -28,6 +32,47 @@
     <label>Noise <input id="s-noise" type="range" min="0" max="1" step="0.01" value="0.15"></label>
     <button id="tilt" type="button" hidden>Enable tilt</button>
   </aside>
+
+  <!-- The 3D shape wraps this panel on every page except the landing page. -->
+  <main class="page" id="panel">
+    <section data-route="projects" hidden>
+      <h1>Projects</h1>
+      <article class="project">
+        <span class="meta">2026 · TypeScript, React</span>
+        <h2>Project One</h2>
+        <p>A short description of what it is, the problem it solves, and your role.</p>
+        <a class="link" href="#">View on GitHub</a>
+      </article>
+      <article class="project">
+        <span class="meta">2025 · Python</span>
+        <h2>Project Two</h2>
+        <p>A short description of what it is, the problem it solves, and your role.</p>
+        <a class="link" href="#">View on GitHub</a>
+      </article>
+      <article class="project">
+        <span class="meta">2025 · Three.js</span>
+        <h2>Project Three</h2>
+        <p>A short description of what it is, the problem it solves, and your role.</p>
+        <a class="link" href="#">Live demo</a>
+      </article>
+    </section>
+
+    <section data-route="about" hidden>
+      <h1>About</h1>
+      <p>Write two or three sentences about your background, what you enjoy building, and what you're looking for.</p>
+      <p>A second short paragraph about how you work or what you're learning right now.</p>
+      <h2 style="margin-top:48px">Skills</h2>
+      <ul class="skills">
+        <li>JavaScript</li><li>TypeScript</li><li>Three.js</li><li>Python</li><li>Node</li>
+      </ul>
+    </section>
+
+    <section data-route="contact" hidden>
+      <h1>Contact</h1>
+      <p><a class="mail" href="mailto:you@example.com">you@example.com</a></p>
+      <p><a href="#">GitHub</a> · <a href="#">LinkedIn</a></p>
+    </section>
+  </main>
 
   <script type="module" src="main.js"></script>
 </body>

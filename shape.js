@@ -85,6 +85,18 @@ const NOISE_GLSL = `
 
 `;
 
+// Panel mode (subpages): the sphere is squashed into a flat slab with a rectangular outline,
+// uBox = its half-size in world units. The equator of the sphere lands exactly on the
+// rectangle's edge; both hemispheres flatten onto its front and back.
+const PANEL_GLSL = `
+      uniform vec3 uBox;
+      vec3 panelShape(vec3 d) {
+        float m = max(abs(d.x), abs(d.y));
+        vec2 sq = m > 1e-4 ? d.xy * (length(d.xy) / m) : d.xy;
+        return vec3(sq * uBox.xy, d.z * uBox.z);
+      }
+`;
+
 // One random hue per visit (kept in sessionStorage so every page of a visit matches).
 // The background is dark navy, so hues from 0.55 to 0.75 (blues/indigos) are skipped.
 function visitHue() {
@@ -107,6 +119,9 @@ export function createShape(canvas, opts = {}) {
   const side = opts.side ?? 'center';
   const dim = opts.dim ?? 1;
   const drag = opts.drag ?? false; // grab-and-spin (landing page only)
+  let panelTarget = opts.panelStart ? 1 : 0; // 1 = collected into the content panel
+  let panelT = panelTarget;
+  const panelEl = opts.panel ?? null; // subpages: element the shape collects itself around
 
   const renderer = new THREE.WebGLRenderer({ canvas, antialias: !isMobile, alpha: true });
   renderer.setPixelRatio(Math.min(devicePixelRatio, isMobile ? 1.5 : 2));
@@ -184,6 +199,8 @@ export function createShape(canvas, opts = {}) {
     uMouse: { value: new THREE.Vector2(9, 9) },
     uMouseStr: { value: 0 },
     uAspect: { value: 1 },
+    uPanel: { value: 0 },
+    uBox: { value: new THREE.Vector3(1, 1, 0.35) },
   };
   const material = new THREE.ShaderMaterial({
     uniforms,
@@ -191,25 +208,28 @@ export function createShape(canvas, opts = {}) {
     depthWrite: false,
     blending: THREE.AdditiveBlending,
     vertexShader: /* glsl */`
-      uniform float uTime, uDistort, uRound, uNoise, uMouseStr, uAspect;
+      uniform float uTime, uDistort, uRound, uNoise, uMouseStr, uAspect, uPanel;
       uniform vec2 uMouse;
       attribute vec3 aC, aP, aN, aKinds, aSeeds;
       attribute float aT;
       varying float vKind;
 
+${PANEL_GLSL}
 ${NOISE_GLSL}      // World position of one corner: spike length from distortion, then noise on top.
       vec3 corner(vec3 dir, float kind, float seed) {
         float wave = 0.5 + 0.5 * sin(dot(dir, vec3(1.3, 2.1, 0.7)) * 5.0 + uTime + seed * 6.0);
         float len = uDistort * 2.4 * (0.15 + 0.85 * wave * (0.4 + 0.6 * seed));
+        len *= 1.0 - 0.8 * uPanel; // collected into a panel, the spikes shrink to a fringe
         vec3 q = dir * 1.5;
         vec3 n = vec3(mixedNoise(q, uTime), mixedNoise(q + 31.4, uTime), mixedNoise(q + 71.7, uTime));
-        vec3 wobble = n * uNoise * 1.6 * (0.4 + 0.6 * kind);
+        vec3 wobble = n * uNoise * 1.6 * (0.4 + 0.6 * kind) * (1.0 - 0.7 * uPanel);
+        vec3 shell = mix(dir, panelShape(dir), uPanel);
         // Pointer: find where this corner would appear on screen and pull the spike in when
         // the cursor is near. Measured on the un-retracted position so it doesn't flicker.
-        vec4 clip = projectionMatrix * modelViewMatrix * vec4(dir * (1.0 + kind * len) + wobble, 1.0);
+        vec4 clip = projectionMatrix * modelViewMatrix * vec4(shell + dir * kind * len + wobble, 1.0);
         vec2 d = (clip.xy / clip.w - uMouse) * vec2(uAspect, 1.0);
-        float near = smoothstep(0.5, 0.0, length(d)) * uMouseStr;
-        return dir * (1.0 + kind * len * (1.0 - 0.95 * near)) + wobble;
+        float near = smoothstep(0.28, 0.0, length(d)) * uMouseStr;
+        return shell + dir * kind * len * (1.0 - 0.95 * near) + wobble;
       }
 
       void main() {
@@ -257,9 +277,10 @@ ${NOISE_GLSL}      // World position of one corner: spike length from distortion
       uniforms: clayUniforms,
       transparent: true,
       vertexShader: /* glsl */`
-        uniform float uTime, uDistort, uRound, uNoise, uMouseStr, uAspect;
+        uniform float uTime, uDistort, uRound, uNoise, uMouseStr, uAspect, uPanel;
         uniform vec2 uMouse;
         varying vec3 vNormal, vView;
+${PANEL_GLSL}
         void main() {
           vec3 p = position * 1.6;
           float freq = 2.0 * (1.0 + (uNoise - 0.15) * 2.0);
@@ -267,8 +288,9 @@ ${NOISE_GLSL}      // World position of one corner: spike length from distortion
           n = sign(n) * pow(abs(n), 1.0 + uRound); // 0 = original lumps, higher = softer
           vec4 clip = projectionMatrix * modelViewMatrix * vec4(p + normal * n * uDistort, 1.0);
           vec2 q = (clip.xy / clip.w - uMouse) * vec2(uAspect, 1.0);
-          float near = smoothstep(0.5, 0.0, length(q)) * uMouseStr;
+          float near = smoothstep(0.28, 0.0, length(q)) * uMouseStr * (1.0 - uPanel);
           p += normal * (n * uDistort * (1.0 - near) - 0.3 * near);
+          p = mix(p, panelShape(normalize(position)), uPanel);
           vec4 mv = modelViewMatrix * vec4(p, 1.0);
           vNormal = normalize(normalMatrix * normal);
           vView = -mv.xyz;
@@ -276,11 +298,13 @@ ${NOISE_GLSL}      // World position of one corner: spike length from distortion
         }`,
       fragmentShader: /* glsl */`
         uniform vec3 uColor;
-        uniform float uLight;
+        uniform float uLight, uPanel;
         varying vec3 vNormal, vView;
         void main() {
           float f = pow(1.0 - abs(dot(normalize(vNormal), normalize(vView))), 2.0);
           vec3 col = mix(uColor * 0.15, uColor, f) + f * 0.25;
+          // As a panel the middle turns pale so text stays readable; only the glowing rim keeps colour.
+          col = mix(col, vec3(0.93, 0.92, 0.89), uPanel * (1.0 - f) * 0.92);
           gl_FragColor = vec4(col, uLight);
         }`,
     })
@@ -310,7 +334,6 @@ ${NOISE_GLSL}      // World position of one corner: spike length from distortion
   const euler = new THREE.Euler();
   const vel = { x: 0, y: 0 }, last = { x: 0, y: 0 };
   let dragging = false;
-  if (drag) canvas.style.cursor = 'grab';
   function spin(x, y) { dragQ.premultiply(tmpQ.setFromEuler(euler.set(x, y, 0))); }
   addEventListener('pointermove', e => {
     if (!pointerOn && uniforms.uMouseStr.value < 0.01) uniforms.uMouse.value.set(e.clientX / innerWidth * 2 - 1, 1 - e.clientY / innerHeight * 2); // no sweep-in from offscreen
@@ -324,16 +347,16 @@ ${NOISE_GLSL}      // World position of one corner: spike length from distortion
     }
   });
   addEventListener('pointerdown', e => {
-    if (!drag || e.target.closest('input, button, a, nav')) return;
+    if (!drag || panelTarget === 1 || e.target.closest('input, button, a, nav')) return;
     dragging = true;
     last.x = e.clientX; last.y = e.clientY;
     vel.x = vel.y = 0;
-    canvas.style.cursor = 'grabbing';
+    document.documentElement.classList.add('dragging');
   });
   // Pointer leaves the window or a finger lifts: spikes spring back out.
   for (const ev of ['pointerup', 'pointercancel']) addEventListener(ev, e => {
     if (e.pointerType === 'touch') pointerOn = false;
-    if (dragging) { dragging = false; if (drag) canvas.style.cursor = 'grab'; }
+    if (dragging) { dragging = false; document.documentElement.classList.remove('dragging'); }
   });
   document.documentElement.addEventListener('pointerleave', () => { pointerOn = false; });
   function onOrientation(e) {
@@ -357,6 +380,10 @@ ${NOISE_GLSL}      // World position of one corner: spike length from distortion
     return false;
   }
 
+  const panelCenter = new THREE.Vector2();
+  const identityQ = new THREE.Quaternion();
+  let lastNow = performance.now();
+  let panelMs = 1800; // how long a full blob <-> panel morph takes
   function resize() {
     const w = innerWidth, h = innerHeight;
     renderer.setSize(w, h, false);
@@ -364,11 +391,18 @@ ${NOISE_GLSL}      // World position of one corner: spike length from distortion
     uniforms.uAspect.value = w / h;
     camera.position.z = w < h ? 11 : 7.5;
     camera.updateProjectionMatrix();
+    if (panelEl) {
+      const r = panelEl.getBoundingClientRect();
+      const wpp = 2 * Math.tan(THREE.MathUtils.degToRad(camera.fov / 2)) * camera.position.z / h; // world units per pixel at z = 0
+      uniforms.uBox.value.set(r.width / 2 * wpp, r.height / 2 * wpp, 0.35);
+      panelCenter.set((r.left + r.width / 2 - w / 2) * wpp, -(r.top + r.height / 2 - h / 2) * wpp);
+    }
     mesh.position.x = side === 'right' && w >= h ? 3.4 : 0;
     mesh.position.y = side === 'right' && w < h ? 2.5 : 0;
   }
   addEventListener('resize', resize);
   resize();
+  if (panelEl) new ResizeObserver(resize).observe(panelEl);
 
   const clock = new THREE.Clock();
   let running = true;
@@ -393,15 +427,37 @@ ${NOISE_GLSL}      // World position of one corner: spike length from distortion
     spin(0.08 * dt, 0.12 * dt); // idle drift
     light += (lightTarget - light) * 0.1;
     if (Math.abs(lightTarget - light) < 0.002) light = lightTarget;
-    uniforms.uDim.value = dim * (1 - light);
+    let ease = 0;
+    if (panelEl) {
+      // Progress moves toward the target (blob <-> panel) and is eased for the morph.
+      const now = performance.now();
+      const step = Math.min((now - lastNow) / panelMs, 0.1);
+      lastNow = now;
+      if (reduceMotion) panelT = panelTarget;
+      else panelT = panelTarget > panelT ? Math.min(panelTarget, panelT + step) : Math.max(panelTarget, panelT - step);
+      const p = panelT;
+      ease = p < 0.5 ? 4 * p * p * p : 1 - Math.pow(-2 * p + 2, 3) / 2;
+      uniforms.uPanel.value = ease;
+    }
+    uniforms.uDim.value = dim * (1 - light) * (1 - 0.3 * ease);
     clayUniforms.uLight.value = light;
     spiky.visible = light < 0.999;
     clay.visible = light > 0.001;
     clay.scale.setScalar(0.92 + 0.08 * light);
     mesh.quaternion.copy(tiltQ.setFromEuler(euler.set(cur.x, cur.y, 0))).multiply(dragQ);
+    if (panelEl) {
+      mesh.quaternion.slerp(identityQ, ease);
+      mesh.position.set(panelCenter.x * ease, panelCenter.y * ease, 0);
+    }
     renderer.render(scene, camera);
   }
   loop();
 
-  return { apply, needsPermission, requestTilt };
+  function setMode(mode, ms = 1800) {
+    panelMs = ms;
+    panelTarget = mode === 'panel' ? 1 : 0;
+    if (panelTarget === 1 && dragging) { dragging = false; document.documentElement.classList.remove('dragging'); }
+  }
+
+  return { apply, needsPermission, requestTilt, setMode };
 }
