@@ -3,11 +3,11 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-  <title>David</title>
+  <title>David Zandanell</title>
   <script>
     try { if (sessionStorage.getItem('theme') === 'light') document.documentElement.dataset.theme = 'light'; } catch {}
     // Set the route before first paint so a direct link to #/about doesn't flash the landing page.
-    document.documentElement.dataset.route = (location.hash.match(/^#\/(projects|about|contact)$/) || [0, 'home'])[1];
+    document.documentElement.dataset.route = (location.hash.match(/^#\/(projects(?:\/[a-z-]+)?|about|contact)$/) || [0, 'home'])[1];
   </script>
   <link rel="stylesheet" href="style.css">
   <script type="importmap">
@@ -18,7 +18,7 @@
   <canvas id="bg" aria-hidden="true"></canvas>
 
   <header class="nav">
-    <a class="logo" href="#/">DAVID</a>
+    <a class="logo" href="#/">DAVID ZANDANELL</a>
     <nav>
       <a href="#/projects" data-route="projects">Projects</a>
       <a href="#/about" data-route="about">About</a>
@@ -35,42 +35,135 @@
 
   <!-- The 3D shape wraps this panel on every page except the landing page. -->
   <main class="page" id="panel">
-    <section data-route="projects" hidden>
+    <section data-route="projects" data-title="Projects" hidden>
       <h1>Projects</h1>
-      <article class="project">
-        <span class="meta">2026 · TypeScript, React</span>
-        <h2>Project One</h2>
-        <p>A short description of what it is, the problem it solves, and your role.</p>
-        <a class="link" href="#">View on GitHub</a>
-      </article>
-      <article class="project">
-        <span class="meta">2025 · Python</span>
-        <h2>Project Two</h2>
-        <p>A short description of what it is, the problem it solves, and your role.</p>
-        <a class="link" href="#">View on GitHub</a>
-      </article>
-      <article class="project">
-        <span class="meta">2025 · Three.js</span>
-        <h2>Project Three</h2>
-        <p>A short description of what it is, the problem it solves, and your role.</p>
-        <a class="link" href="#">Live demo</a>
-      </article>
+      <a class="project" href="#/projects/fight-guys">
+        <img class="thumb" src="assets/fight-guys-main.png" alt="" loading="lazy">
+        <span class="info">
+          <span class="meta">Auto battler, roguelite · Browser (HTML5)</span>
+          <h2>Fight Guys</h2>
+          <p>Build a team of bear-like fighters and watch them brawl other players' teams.</p>
+        </span>
+      </a>
+      <a class="project" href="#/projects/reverie">
+        <img class="thumb" src="https://img.itch.zone/aW1hZ2UvNDY0NDIxNC8yNzY3NjA2Ny5wbmc=/original/FVvDMA.png" alt="" loading="lazy">
+        <span class="info">
+          <span class="meta">Action roguelike · Windows</span>
+          <h2>REVERIE</h2>
+          <p>Step into a painting as a failed artist turned curator and fight your way through a surreal world.</p>
+        </span>
+      </a>
+      <a class="project" href="#/projects/yes-shopping">
+        <img class="thumb" src="assets/yes-shopping-header.png" alt="" loading="lazy" style="object-position: left center">
+        <span class="info">
+          <span class="meta">Typing, arcade · Windows, macOS</span>
+          <h2>YES SHOPPING</h2>
+          <p>A short typing game set on a late-night TV shopping channel. In German.</p>
+        </span>
+      </a>
     </section>
 
-    <section data-route="about" hidden>
+    <section data-route="projects/fight-guys" data-title="Fight Guys" hidden>
+      <a class="back" href="#/projects">← Projects</a>
+      <img class="header-img" src="assets/fight-guys-main.png" alt="Fight Guys: bear fighters battling on a grass field">
+      <h1>Fight Guys</h1>
+      <p class="lede">A physics-based auto battler that blends cuteness with brutal gladiatorial combat.</p>
+      <dl class="facts">
+        <div><dt>Genre</dt><dd>Auto battler, roguelite</dd></div>
+        <div><dt>Platform</dt><dd>Browser (HTML5)</dd></div>
+        <div><dt>Engine</dt><dd>Unity</dd></div>
+        <div><dt>My role</dt><dd>Developer, with Leo Schweiger</dd></div>
+        <div><dt>Context</dt><dd>Multimedia project, FH Salzburg</dd></div>
+        <div><dt>Music</dt><dd>Sebastian Schweiger, Andreas Steiner</dd></div>
+      </dl>
+      <a class="button" href="https://leoschweiger.itch.io/fight-guys" target="_blank" rel="noopener">Play in your browser ↗</a>
+      <p>You assemble a team of up to five bear-like fighters. Between rounds you buy units, modifiers, potions and food in a shop, then your team is sent into the arena against another player's team. The fights play out on their own and are driven by physics.</p>
+      <p>Every lost fight costs a life and every win earns a trophy. Strong runs climb toward an endless mode that only ends when your lives run out.</p>
+      <div class="shots">
+        <a href="https://img.itch.zone/aW1hZ2UvMzQ3MzE4OC8yMTM2NTYwMi5wbmc=/original/TVh3kS.png" target="_blank" rel="noopener"><img src="https://img.itch.zone/aW1hZ2UvMzQ3MzE4OC8yMTM2NTYwMi5wbmc=/original/TVh3kS.png" alt="Fight Guys screenshot 1" loading="lazy"></a>
+        <a href="https://img.itch.zone/aW1hZ2UvMzQ3MzE4OC8yMTM2NTU5Ny5wbmc=/original/Kg0Qsb.png" target="_blank" rel="noopener"><img src="https://img.itch.zone/aW1hZ2UvMzQ3MzE4OC8yMTM2NTU5Ny5wbmc=/original/Kg0Qsb.png" alt="Fight Guys screenshot 2" loading="lazy"></a>
+        <a href="https://img.itch.zone/aW1hZ2UvMzQ3MzE4OC8yMTM2NTU5OS5wbmc=/original/ycmOZl.png" target="_blank" rel="noopener"><img src="https://img.itch.zone/aW1hZ2UvMzQ3MzE4OC8yMTM2NTU5OS5wbmc=/original/ycmOZl.png" alt="Fight Guys screenshot 3" loading="lazy"></a>
+        <a href="https://img.itch.zone/aW1hZ2UvMzQ3MzE4OC8yMTM2NTYwMS5wbmc=/original/bmJAdU.png" target="_blank" rel="noopener"><img src="https://img.itch.zone/aW1hZ2UvMzQ3MzE4OC8yMTM2NTYwMS5wbmc=/original/bmJAdU.png" alt="Fight Guys screenshot 4" loading="lazy"></a>
+        <a href="https://img.itch.zone/aW1hZ2UvMzQ3MzE4OC8yMTM2NTYwMC5wbmc=/original/nGWZqV.png" target="_blank" rel="noopener"><img src="https://img.itch.zone/aW1hZ2UvMzQ3MzE4OC8yMTM2NTYwMC5wbmc=/original/nGWZqV.png" alt="Fight Guys screenshot 5" loading="lazy"></a>
+      </div>
+    </section>
+
+    <section data-route="projects/reverie" data-title="REVERIE" hidden>
+      <a class="back" href="#/projects">← Projects</a>
+      <h1>REVERIE</h1>
+      <p class="lede">A 3D action roguelike where art forms both the setting and the gameplay space.</p>
+      <dl class="facts">
+        <div><dt>Genre</dt><dd>Action roguelike</dd></div>
+        <div><dt>Platform</dt><dd>Windows</dd></div>
+        <div><dt>Status</dt><dd>Prototype</dd></div>
+        <div><dt>Team</dt><dd>Team Graukas</dd></div>
+        <div><dt>Context</dt><dd>University project</dd></div>
+      </dl>
+      <a class="button" href="https://dreiegg.itch.io/reverie-prototype" target="_blank" rel="noopener">Download the prototype ↗</a>
+      <p>You play a failed artist who ends up as curator of a mysterious collection. After restoring the gallery you step into its central painting, a portal into a world inspired by surrealism.</p>
+      <p>Combat is real time and built around a tree-based combo system: you chain inputs along the tree, and reaching an endpoint triggers a finisher with its own animation and effects. Between runs you visit the Masterworks, living paintings that grant upgrades. Each Masterwork is made by a different artist, and the idea is to give artists a platform to bring their own style into the game.</p>
+      <p>It was built under a tight university schedule. The team plans to build a new game around the same concept.</p>
+      <div class="shots">
+        <a href="https://img.itch.zone/aW1hZ2UvNDY0NDIxNC8yNzY3NjA2Ny5wbmc=/original/FVvDMA.png" target="_blank" rel="noopener"><img src="https://img.itch.zone/aW1hZ2UvNDY0NDIxNC8yNzY3NjA2Ny5wbmc=/original/FVvDMA.png" alt="REVERIE screenshot 1" loading="lazy"></a>
+        <a href="https://img.itch.zone/aW1hZ2UvNDY0NDIxNC8yNzY3NjA2OS5wbmc=/original/vciKc8.png" target="_blank" rel="noopener"><img src="https://img.itch.zone/aW1hZ2UvNDY0NDIxNC8yNzY3NjA2OS5wbmc=/original/vciKc8.png" alt="REVERIE screenshot 2" loading="lazy"></a>
+        <a href="https://img.itch.zone/aW1hZ2UvNDY0NDIxNC8yNzY3NjA2OC5wbmc=/original/8I0lWz.png" target="_blank" rel="noopener"><img src="https://img.itch.zone/aW1hZ2UvNDY0NDIxNC8yNzY3NjA2OC5wbmc=/original/8I0lWz.png" alt="REVERIE screenshot 3" loading="lazy"></a>
+        <a href="https://img.itch.zone/aW1hZ2UvNDY0NDIxNC8yNzY3NjA2Ni5wbmc=/original/WY0zBJ.png" target="_blank" rel="noopener"><img src="https://img.itch.zone/aW1hZ2UvNDY0NDIxNC8yNzY3NjA2Ni5wbmc=/original/WY0zBJ.png" alt="REVERIE screenshot 4" loading="lazy"></a>
+      </div>
+    </section>
+
+    <section data-route="projects/yes-shopping" data-title="YES SHOPPING" hidden>
+      <a class="back" href="#/projects">← Projects</a>
+      <img class="header-img" src="assets/yes-shopping-header.png" alt="">
+      <h1 class="sr-only">YES SHOPPING</h1>
+      <p class="lede">Sell new and revolutionary products on TV by typing.</p>
+      <dl class="facts">
+        <div><dt>Genre</dt><dd>Typing, arcade</dd></div>
+        <div><dt>Platform</dt><dd>Windows, macOS</dd></div>
+        <div><dt>Engine</dt><dd>Unity</dd></div>
+        <div><dt>My role</dt><dd>Art direction</dd></div>
+        <div><dt>Context</dt><dd>12th MMArmalade Jam, theme "Lost Signal"</dd></div>
+        <div><dt>Code</dt><dd>Antonia Pecha, Kilian Kolb, Piet Koller</dd></div>
+        <div><dt>Art and UI</dt><dd>Leo Schweiger</dd></div>
+      </dl>
+      <a class="button" href="https://dreiegg.itch.io/yesshopping" target="_blank" rel="noopener">Download on itch.io ↗</a>
+      <p>You are a TV shopping host selling products by typing words. Better words sell faster, and you have to keep typing so viewer retention never drops to zero, otherwise the show is cancelled.</p>
+      <p>Made for the 12th MMArmalade Jam, a game jam for students of FH Salzburg. The game is entirely in German.</p>
+      <div class="shots">
+        <a href="https://img.itch.zone/aW1hZ2UvMzM4MzU5NC8yMDI0MTAyMC5qcGc=/original/6X6%2FqM.jpg" target="_blank" rel="noopener"><img src="https://img.itch.zone/aW1hZ2UvMzM4MzU5NC8yMDI0MTAyMC5qcGc=/original/6X6%2FqM.jpg" alt="YES SHOPPING screenshot 1" loading="lazy"></a>
+        <a href="https://img.itch.zone/aW1hZ2UvMzM4MzU5NC8yMDIwMjQwNi5wbmc=/original/OxMVhE.png" target="_blank" rel="noopener"><img src="https://img.itch.zone/aW1hZ2UvMzM4MzU5NC8yMDIwMjQwNi5wbmc=/original/OxMVhE.png" alt="YES SHOPPING screenshot 2" loading="lazy"></a>
+        <a href="https://img.itch.zone/aW1hZ2UvMzM4MzU5NC8yMDI0MTAzNC5qcGc=/original/WECAE1.jpg" target="_blank" rel="noopener"><img src="https://img.itch.zone/aW1hZ2UvMzM4MzU5NC8yMDI0MTAzNC5qcGc=/original/WECAE1.jpg" alt="YES SHOPPING screenshot 3" loading="lazy"></a>
+        <a href="https://img.itch.zone/aW1hZ2UvMzM4MzU5NC8yMDI0MTAxOS5qcGc=/original/AXp2BS.jpg" target="_blank" rel="noopener"><img src="https://img.itch.zone/aW1hZ2UvMzM4MzU5NC8yMDI0MTAxOS5qcGc=/original/AXp2BS.jpg" alt="YES SHOPPING screenshot 4" loading="lazy"></a>
+        <a href="https://img.itch.zone/aW1hZ2UvMzM4MzU5NC8yMDI0MTAxOC5qcGc=/original/6HdY71.jpg" target="_blank" rel="noopener"><img src="https://img.itch.zone/aW1hZ2UvMzM4MzU5NC8yMDI0MTAxOC5qcGc=/original/6HdY71.jpg" alt="YES SHOPPING screenshot 5" loading="lazy"></a>
+      </div>
+    </section>
+
+    <section data-route="about" data-title="About" hidden>
       <h1>About</h1>
-      <p>Write two or three sentences about your background, what you enjoy building, and what you're looking for.</p>
-      <p>A second short paragraph about how you work or what you're learning right now.</p>
+      <p>I like building interactive projects that people actually want to use. Games, tools and experiments are only worth making if someone enjoys picking them up, so I care as much about how something feels in your hands as how it works under the hood.</p>
       <h2 style="margin-top:48px">Skills</h2>
       <ul class="skills">
-        <li>JavaScript</li><li>TypeScript</li><li>Three.js</li><li>Python</li><li>Node</li>
+        <li>C#</li>
+        <li>Python</li>
+        <li>JavaScript/TypeScript</li>
+        <li>Java</li>
+        <li>C++</li>
+        <li>HTML + CSS</li>
+        <li>SQL</li>
+        <li>LaTeX</li>
+        <li>PHP</li>
+        <li>Unity</li>
+        <li>Unreal Engine</li>
+        <li>Git</li>
+        <li>OpenGL</li>
+        <li>Docker</li>
+        <li>MS Office</li>
       </ul>
     </section>
 
-    <section data-route="contact" hidden>
+    <section data-route="contact" data-title="Contact" hidden>
       <h1>Contact</h1>
-      <p><a class="mail" href="mailto:you@example.com">you@example.com</a></p>
-      <p><a href="#">GitHub</a> · <a href="#">LinkedIn</a></p>
+      <p><a class="mail" href="mailto:david.zandanell@gmx.net">david.zandanell@gmx.net</a></p>
+      <p><a href="https://github.com/Wyndelion" target="_blank" rel="noopener">GitHub</a> · <a href="https://www.linkedin.com/in/david-zandanell-3b080829a/" target="_blank" rel="noopener">LinkedIn</a></p>
     </section>
   </main>
 

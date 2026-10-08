@@ -3,12 +3,11 @@ import { createShape, loadSettings, saveSettings } from './shape.js';
 
 const $ = id => document.getElementById(id);
 const root = document.documentElement;
-const ROUTES = ['projects', 'about', 'contact'];
 
 // Hash routes (#/projects) so it works on any static host with no server rules.
 const currentRoute = () => {
   const r = location.hash.replace(/^#\/?/, '');
-  return ROUTES.includes(r) ? r : 'home';
+  return document.querySelector(`#panel section[data-route="${r}"]`) ? r : 'home';
 };
 
 const shape = createShape($('bg'), { panel: $('panel'), drag: true, panelStart: currentRoute() !== 'home' });
@@ -27,9 +26,10 @@ function show(route) {
   const from = shown;
   shown = route;
   root.dataset.route = route;
-  document.title = route === 'home' ? 'David' : `${route[0].toUpperCase()}${route.slice(1)} — David`;
+  const title = document.querySelector(`#panel section[data-route="${route}"]`)?.dataset.title;
+  document.title = title ? `${title} | David Zandanell` : 'David Zandanell';
   document.querySelectorAll('.nav nav a').forEach(a => {
-    if (a.dataset.route === route) a.setAttribute('aria-current', 'page');
+    if (a.dataset.route === route.split('/')[0]) a.setAttribute('aria-current', 'page');
     else a.removeAttribute('aria-current');
   });
 
