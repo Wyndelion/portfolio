@@ -104,10 +104,14 @@ function visitHue() {
     const saved = sessionStorage.getItem('hue');
     if (saved !== null) return +saved;
   } catch { /* storage blocked */ }
-  let h = Math.random() * 0.8;
-  if (h > 0.55) h += 0.2;
+  const h = randomHue();
   try { sessionStorage.setItem('hue', h); } catch { /* storage blocked */ }
   return h;
+}
+
+function randomHue() {
+  const h = Math.random() * 0.8;
+  return h > 0.55 ? h + 0.2 : h;
 }
 
 // A spiky crystal built from small closed loops. Each loop runs tip -> neighbour -> node ->
@@ -121,6 +125,7 @@ export function createShape(canvas, opts = {}) {
   const drag = opts.drag ?? false; // grab-and-spin (landing page only)
   let panelTarget = opts.panelStart ? 1 : 0; // 1 = collected into the content panel
   let panelT = panelTarget;
+  const hue0 = visitHue();
   const panelEl = opts.panel ?? null; // subpages: element the shape collects itself around
 
   const renderer = new THREE.WebGLRenderer({ canvas, antialias: !isMobile, alpha: true });
@@ -194,7 +199,7 @@ export function createShape(canvas, opts = {}) {
     uDistort: { value: DEFAULTS.distort },
     uRound: { value: DEFAULTS.round },
     uNoise: { value: DEFAULTS.noise },
-    uColor: { value: new THREE.Color().setHSL(visitHue(), 0.9, 0.55) },
+    uColor: { value: new THREE.Color().setHSL(hue0, 0.9, 0.55) },
     uDim: { value: dim },
     uMouse: { value: new THREE.Vector2(9, 9) },
     uMouseStr: { value: 0 },
@@ -268,7 +273,7 @@ ${NOISE_GLSL}      // World position of one corner: spike length from distortion
   // The cursor flattens the clay where it comes near, like it retracts the spikes.
   const clayUniforms = {
     ...uniforms,
-    uColor: { value: new THREE.Color().setHSL(visitHue(), 0.85, 0.6) },
+    uColor: { value: new THREE.Color().setHSL(hue0, 0.85, 0.6) },
     uLight: { value: 0 },
   };
   const clay = new THREE.Mesh(
@@ -383,6 +388,10 @@ ${PANEL_GLSL}
   const panelCenter = new THREE.Vector2();
   const identityQ = new THREE.Quaternion();
   let lastNow = performance.now();
+  // Colour change on click: declared up here because the render loop starts before the handlers below are set up.
+  const CORE = 0.55; // fraction of the shape's radius that counts as "the middle"
+  const HUE_MS = 3000;
+  let hue = hue0, hueFrom = hue0, hueTo = hue0, hueT = 1, lastHueNow = performance.now();
   let panelMs = 1800; // how long a full blob <-> panel morph takes
   function resize() {
     const w = innerWidth, h = innerHeight;
@@ -449,9 +458,52 @@ ${PANEL_GLSL}
       mesh.quaternion.slerp(identityQ, ease);
       mesh.position.set(panelCenter.x * ease, panelCenter.y * ease, 0);
     }
+    if (hueT < 1) {
+      const now = performance.now();
+      hueT = Math.min(1, hueT + (now - lastHueNow) / HUE_MS);
+      lastHueNow = now;
+      const e = hueT < 0.5 ? 2 * hueT * hueT : 1 - Math.pow(-2 * hueT + 2, 2) / 2;
+      const delta = ((hueTo - hueFrom + 1.5) % 1) - 0.5; // shortest way round the colour wheel
+      hue = (hueFrom + delta * e + 1) % 1;
+      uniforms.uColor.value.setHSL(hue, 0.9, 0.55);
+      clayUniforms.uColor.value.setHSL(hue, 0.85, 0.6);
+      if (hueT >= 1) { try { sessionStorage.setItem('hue', hue); } catch { /* storage blocked */ } }
+    }
     renderer.render(scene, camera);
   }
   loop();
+
+  // Click the middle of the shape (landing page only) and the colour slowly drifts to a new hue.
+
+  function inCore(e) {
+    const c = new THREE.Vector3();
+    mesh.getWorldPosition(c).project(camera);
+    const cx = (c.x * 0.5 + 0.5) * innerWidth, cy = (-c.y * 0.5 + 0.5) * innerHeight;
+    const pxPerWorld = innerHeight / (2 * Math.tan(THREE.MathUtils.degToRad(camera.fov / 2)) * camera.position.z);
+    const radius = (1 + uniforms.uDistort.value) * pxPerWorld * CORE;
+    return Math.hypot(e.clientX - cx, e.clientY - cy) < radius;
+  }
+
+  function changeColor() {
+    hueFrom = hue;
+    do { hueTo = randomHue(); } while (Math.min(Math.abs(hueTo - hue), 1 - Math.abs(hueTo - hue)) < 0.15);
+    hueT = 0;
+    lastHueNow = performance.now();
+  }
+
+  let press = null;
+  addEventListener('pointerdown', e => { press = { x: e.clientX, y: e.clientY }; });
+  addEventListener('pointerup', e => {
+    const p = press;
+    press = null;
+    // a tap or click, not the end of a drag, on the canvas itself, while showing the blob
+    if (!p || e.target !== canvas || panelTarget === 1 || Math.hypot(e.clientX - p.x, e.clientY - p.y) > 6) return;
+    if (inCore(e)) changeColor();
+  });
+  addEventListener('pointermove', e => {
+    const over = e.pointerType !== 'touch' && e.target === canvas && panelTarget === 0 && !dragging && inCore(e);
+    document.documentElement.classList.toggle('over-core', over);
+  });
 
   function setMode(mode, ms = 1800) {
     panelMs = ms;
