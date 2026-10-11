@@ -59,6 +59,85 @@ show(currentRoute());
 // Transitions stay off until the first frames are drawn, so loading on a subpage doesn't animate.
 requestAnimationFrame(() => requestAnimationFrame(() => root.classList.add('ready')));
 
+// ---- Scroll to navigate: home, projects, about, contact (and back up) ----
+// Scrolling past the end of a page moves to the next one; scrolling past the top moves to the
+// previous one. Project pages only go back up to the project list.
+const ORDER = ['home', 'projects', 'about', 'contact'];
+const nextOf = r => ORDER[ORDER.indexOf(r) + 1]; // undefined for contact and project pages
+const prevOf = r => (r.startsWith('projects/') ? 'projects' : ORDER[ORDER.indexOf(r) - 1]);
+
+let cooldownUntil = 0; // ignore input while a transition plays (also swallows trackpad inertia)
+let lastScrollAt = 0; // last time the panel's own content moved
+let accum = 0; // wheel distance collected past an edge
+let lastWheel = 0;
+
+$('panel').addEventListener('scroll', () => { lastScrollAt = performance.now(); }, { passive: true });
+
+function go(route) {
+  const involvesHome = shown === 'home' || route === 'home';
+  cooldownUntil = performance.now() + (involvesHome ? 1600 : 800);
+  accum = 0;
+  // replace, so scrolling through the site doesn't fill up the back button history
+  location.replace(route === 'home' ? '#/' : `#/${route}`);
+}
+
+const edges = () => {
+  const p = $('panel');
+  return { top: p.scrollTop <= 1, bottom: p.scrollTop + p.clientHeight >= p.scrollHeight - 2 };
+};
+
+addEventListener('wheel', e => {
+  if (e.ctrlKey || (e.target instanceof Element && e.target.closest('.controls'))) return; // pinch zoom, sliders
+  const now = performance.now();
+  if (now < cooldownUntil) { accum = 0; return; }
+  const dir = Math.sign(e.deltaY);
+  if (!dir) return;
+
+  if (shown === 'home') {
+    if (dir < 0) return;
+    if (now - lastWheel > 300) accum = 0;
+    lastWheel = now;
+    accum += e.deltaY;
+    if (accum > 60) go('projects');
+    return;
+  }
+
+  const panel = $('panel');
+  // Wheel over the empty sides of the page scrolls the panel too.
+  if (!panel.contains(e.target)) panel.scrollTop += e.deltaY;
+  const target = dir > 0 ? nextOf(shown) : prevOf(shown);
+  const atEdge = dir > 0 ? edges().bottom : edges().top;
+  // Only wheel movement that happens while the content has stopped at the edge counts,
+  // so a flick that merely reaches the end doesn't carry on into the next page.
+  if (!target || !atEdge || now - lastScrollAt < 180) { accum = 0; return; }
+  if (now - lastWheel > 300 || Math.sign(accum) !== dir) accum = 0;
+  lastWheel = now;
+  accum += e.deltaY;
+  if (Math.abs(accum) > 140) go(target);
+}, { passive: true });
+
+// Touch: a quick vertical swipe. In a page it only counts if the swipe started at the edge
+// and the content didn't move.
+let touch = null;
+addEventListener('touchstart', e => {
+  if (e.touches.length !== 1 || (e.target instanceof Element && e.target.closest('.controls'))) { touch = null; return; }
+  const t = e.touches[0];
+  touch = { x: t.clientX, y: t.clientY, time: performance.now(), scrollTop: $('panel').scrollTop, ...edges() };
+}, { passive: true });
+addEventListener('touchend', e => {
+  const s = touch;
+  touch = null;
+  if (!s || performance.now() < cooldownUntil) return;
+  const t = e.changedTouches[0];
+  const dy = s.y - t.clientY; // positive: finger moved up, which means scroll down
+  if (Math.abs(dy) < 70 || Math.abs(dy) < Math.abs(t.clientX - s.x) * 1.5 || performance.now() - s.time > 700) return;
+  const dir = dy > 0 ? 1 : -1;
+  if (shown === 'home') { if (dir > 0) go('projects'); return; }
+  const target = dir > 0 ? nextOf(shown) : prevOf(shown);
+  const atEdge = dir > 0 ? s.bottom : s.top;
+  if (target && atEdge && $('panel').scrollTop === s.scrollTop) go(target);
+}, { passive: true });
+
 const settings = loadSettings();
 const inputs = { distort: $('s-distort'), round: $('s-round'), noise: $('s-noise') };
 for (const [key, el] of Object.entries(inputs)) {

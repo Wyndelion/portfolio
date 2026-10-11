@@ -347,7 +347,7 @@ ${PANEL_GLSL}
     }
   });
   addEventListener('pointerdown', e => {
-    if (!drag || panelTarget === 1 || e.target.closest('input, button, a, nav')) return;
+    if (!drag || panelTarget === 1 || e.pointerType === 'touch' || e.target.closest('input, button, a, nav')) return;
     dragging = true;
     last.x = e.clientX; last.y = e.clientY;
     vel.x = vel.y = 0;
