@@ -489,6 +489,7 @@ ${PANEL_GLSL}
     do { hueTo = randomHue(); } while (Math.min(Math.abs(hueTo - hue), 1 - Math.abs(hueTo - hue)) < 0.15);
     hueT = 0;
     lastHueNow = performance.now();
+    document.dispatchEvent(new CustomEvent('shapecolor')); // for analytics
   }
 
   let press = null;

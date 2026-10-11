@@ -168,6 +168,9 @@ html:not(.ready) *, html:not(.ready) *::before { transition: none !important; }
   100% { transform: scaleY(1); opacity: 0; }
 }
 html[data-route="home"] .scroll-hint { opacity: 1; visibility: visible; pointer-events: auto; transition: opacity .6s .9s; }
+.note { margin-top: 40px; font-size: .78rem; }
+.note a { border-bottom: 1px solid var(--line); }
+.note a:hover { color: var(--fg); }
 .next {
   display: block; margin-top: 48px; padding-top: 20px; border-top: 1px solid var(--line);
   font-size: .8rem; letter-spacing: .15em; text-transform: uppercase; color: var(--muted);

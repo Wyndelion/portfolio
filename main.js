@@ -1,4 +1,5 @@
 import './theme.js';
+import { trackPage } from './analytics.js';
 import { createShape, loadSettings, saveSettings } from './shape.js';
 
 const $ = id => document.getElementById(id);
@@ -28,6 +29,7 @@ function show(route) {
   root.dataset.route = route;
   const title = document.querySelector(`#panel section[data-route="${route}"]`)?.dataset.title;
   document.title = title ? `${title} | David Zandanell` : 'David Zandanell';
+  trackPage(route, document.title);
   document.querySelectorAll('.nav nav a').forEach(a => {
     if (a.dataset.route === route.split('/')[0]) a.setAttribute('aria-current', 'page');
     else a.removeAttribute('aria-current');
