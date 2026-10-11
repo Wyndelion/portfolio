@@ -97,6 +97,24 @@ const PANEL_GLSL = `
       }
 `;
 
+// Light mode card: the same flattening, but the corners are rounded off. A point is pulled onto an
+// arc of radius uCorner (world units) wherever it lies beyond the corner of the inner rectangle.
+const PANEL_GLSL_CLAY = `
+      uniform vec3 uBox;
+      uniform float uCorner;
+      vec3 panelShape(vec3 d) {
+        float m = max(abs(d.x), abs(d.y));
+        vec2 sq = m > 1e-4 ? d.xy * (length(d.xy) / m) : d.xy;
+        vec2 P = sq * uBox.xy;
+        vec2 inner = max(uBox.xy - uCorner, vec2(0.0));
+        vec2 C = clamp(P, -inner, inner);
+        vec2 V = P - C;
+        float len = length(V);
+        if (len > uCorner) V *= uCorner / len;
+        return vec3(C + V, d.z * uBox.z);
+      }
+`;
+
 // One random hue per visit (kept in sessionStorage so every page of a visit matches).
 // The background is dark navy, so hues from 0.55 to 0.75 (blues/indigos) are skipped.
 function visitHue() {
@@ -275,6 +293,10 @@ ${NOISE_GLSL}      // World position of one corner: spike length from distortion
     ...uniforms,
     uColor: { value: new THREE.Color().setHSL(hue0, 0.85, 0.6) },
     uLight: { value: 0 },
+    uBox: { value: new THREE.Vector3(1, 1, 0.35) }, // its own size: the clay card is a bit larger than the panel
+    uCorner: { value: 0 },
+    uJig: { value: 0.03 },
+    uJT: { value: 0 },
   };
   const clay = new THREE.Mesh(
     new THREE.IcosahedronGeometry(1, isMobile ? 24 : 48),
@@ -282,20 +304,30 @@ ${NOISE_GLSL}      // World position of one corner: spike length from distortion
       uniforms: clayUniforms,
       transparent: true,
       vertexShader: /* glsl */`
-        uniform float uTime, uDistort, uRound, uNoise, uMouseStr, uAspect, uPanel;
+        uniform float uTime, uDistort, uRound, uNoise, uMouseStr, uAspect, uPanel, uJig, uJT;
         uniform vec2 uMouse;
         varying vec3 vNormal, vView;
-${PANEL_GLSL}
+${PANEL_GLSL_CLAY}
         void main() {
           vec3 p = position * 1.6;
           float freq = 2.0 * (1.0 + (uNoise - 0.15) * 2.0);
           float n = sin(p.x * freq + uTime) * sin(p.y * freq + uTime * 0.8) * sin(p.z * freq + uTime * 1.2);
           n = sign(n) * pow(abs(n), 1.0 + uRound); // 0 = original lumps, higher = softer
-          vec4 clip = projectionMatrix * modelViewMatrix * vec4(p + normal * n * uDistort, 1.0);
+          vec3 sphereP = p + normal * n * uDistort;
+          vec3 cardP = panelShape(normalize(position));
+          // A little jelly: ripples run across the card, scaled by uJig (kicked up from JavaScript, then settling).
+          float rip = sin(cardP.x * 0.9 + uJT) * sin(cardP.y * 0.9 - uJT * 1.3) + 0.5 * sin(length(cardP.xy) * 1.2 - uJT * 1.7);
+          cardP.z += rip * uJig * 0.12;
+          cardP.xy *= 1.0 + rip * uJig * 0.004;
+          vec4 clip = projectionMatrix * modelViewMatrix * vec4(mix(sphereP, cardP, uPanel), 1.0);
           vec2 q = (clip.xy / clip.w - uMouse) * vec2(uAspect, 1.0);
-          float near = smoothstep(0.28, 0.0, length(q)) * uMouseStr * (1.0 - uPanel);
-          p += normal * (n * uDistort * (1.0 - near) - 0.3 * near);
-          p = mix(p, panelShape(normalize(position)), uPanel);
+          float near = smoothstep(0.28, 0.0, length(q)) * uMouseStr;
+          // Blob: lumps flatten under the cursor. Card: the edge near the cursor dents inward and backward.
+          vec3 blobP = p + normal * (n * uDistort * (1.0 - near) - 0.3 * near);
+          vec3 dentP = cardP;
+          dentP.xy *= 1.0 - 0.10 * near;
+          dentP.z -= 0.3 * near;
+          p = mix(blobP, dentP, uPanel);
           vec4 mv = modelViewMatrix * vec4(p, 1.0);
           vNormal = normalize(normalMatrix * normal);
           vView = -mv.xyz;
@@ -388,6 +420,13 @@ ${PANEL_GLSL}
   const panelCenter = new THREE.Vector2();
   const identityQ = new THREE.Quaternion();
   let lastNow = performance.now();
+  // Light mode card leans towards the cursor on a spring, so it follows with a slight lag.
+  let lastJ = performance.now();
+  // Jelly energy: kicked up by pointer speed, scrolling and page changes, then decays. Kept small on purpose.
+  const IDLE = 0.03, MAX_ENERGY = 0.4;
+  let energy = IDLE, jt = 0, lastPtr = null;
+  let tiltX = 0, tiltY = 0, tiltVX = 0, tiltVY = 0;
+  const jiggleQ = new THREE.Quaternion();
   // Colour change on click: declared up here because the render loop starts before the handlers below are set up.
   const CORE = 0.55; // fraction of the shape's radius that counts as "the middle"
   const HUE_MS = 3000;
@@ -404,6 +443,10 @@ ${PANEL_GLSL}
       const r = panelEl.getBoundingClientRect();
       const wpp = 2 * Math.tan(THREE.MathUtils.degToRad(camera.fov / 2)) * camera.position.z / h; // world units per pixel at z = 0
       uniforms.uBox.value.set(r.width / 2 * wpp, r.height / 2 * wpp, 0.35);
+      const pad = (w <= 720 ? 1 : 28) * wpp; // how far the light mode card sticks out around the text box
+      clayUniforms.uBox.value.set(r.width / 2 * wpp + pad, r.height / 2 * wpp + pad, 0.35);
+      // Big enough to look round, small enough that the text box corners still sit inside the card.
+      clayUniforms.uCorner.value = (w <= 720 ? 44 : 100) * wpp;
       panelCenter.set((r.left + r.width / 2 - w / 2) * wpp, -(r.top + r.height / 2 - h / 2) * wpp);
     }
     mesh.position.x = side === 'right' && w >= h ? 3.4 : 0;
@@ -456,8 +499,22 @@ ${PANEL_GLSL}
     mesh.quaternion.copy(tiltQ.setFromEuler(euler.set(cur.x, cur.y, 0))).multiply(dragQ);
     if (panelEl) {
       mesh.quaternion.slerp(identityQ, ease);
+      mesh.quaternion.multiply(jiggleQ.setFromEuler(euler.set(tiltX * light * ease, tiltY * light * ease, 0))); // light mode only
       mesh.position.set(panelCenter.x * ease, panelCenter.y * ease, 0);
     }
+    const nowJ = performance.now();
+    const dtJ = Math.min((nowJ - lastJ) / 1000, 0.05);
+    lastJ = nowJ;
+    energy = IDLE + (energy - IDLE) * Math.exp(-dtJ * 2.6);
+    jt += dtJ * (5 + energy * 7);
+    clayUniforms.uJig.value = energy;
+    clayUniforms.uJT.value = jt;
+    // underdamped spring, so the card overshoots a little when the cursor moves
+    const goalX = pointerOn ? -mouseTarget.y * 0.03 : 0, goalY = pointerOn ? mouseTarget.x * 0.03 : 0;
+    tiltVX = (tiltVX + (goalX - tiltX) * 140 * dtJ) * Math.exp(-dtJ * 16);
+    tiltVY = (tiltVY + (goalY - tiltY) * 140 * dtJ) * Math.exp(-dtJ * 16);
+    tiltX += tiltVX * dtJ;
+    tiltY += tiltVY * dtJ;
     if (hueT < 1) {
       const now = performance.now();
       hueT = Math.min(1, hueT + (now - lastHueNow) / HUE_MS);
@@ -506,11 +563,28 @@ ${PANEL_GLSL}
     document.documentElement.classList.toggle('over-core', over);
   });
 
+  addEventListener('pointermove', e => {
+    const t = performance.now();
+    if (lastPtr) {
+      const speed = Math.hypot(e.clientX - lastPtr.x, e.clientY - lastPtr.y) / Math.max(t - lastPtr.t, 1); // px per ms
+      energy = Math.min(MAX_ENERGY, energy + Math.min(speed, 3) * 0.008);
+    }
+    lastPtr = { x: e.clientX, y: e.clientY, t };
+  });
+  if (panelEl) {
+    let lastTop = 0;
+    panelEl.addEventListener('scroll', () => {
+      energy = Math.min(MAX_ENERGY, energy + Math.abs(panelEl.scrollTop - lastTop) * 0.001);
+      lastTop = panelEl.scrollTop;
+    }, { passive: true });
+  }
+  function jiggle(amount = 0.2) { energy = Math.min(MAX_ENERGY, energy + amount); }
+
   function setMode(mode, ms = 1800) {
     panelMs = ms;
     panelTarget = mode === 'panel' ? 1 : 0;
     if (panelTarget === 1 && dragging) { dragging = false; document.documentElement.classList.remove('dragging'); }
   }
 
-  return { apply, needsPermission, requestTilt, setMode };
+  return { apply, needsPermission, requestTilt, setMode, jiggle };
 }

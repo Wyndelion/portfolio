@@ -43,6 +43,7 @@ function show(route) {
     return; // keep the last section in place so it can fade out instead of blanking
   }
   shape.setMode('panel');
+  shape.jiggle(0.2); // a small wobble when the page changes (light mode card)
   if (from !== 'home' && from !== route) {
     // Section to section: the shape stays put, only the text fades out, swaps and fades back in.
     $('panel').classList.add('swap');
